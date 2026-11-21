@@ -1,0 +1,77 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Firebase login (email / Google) is switched on by putting google-services.json in this folder.
+// Without that file the app builds as before and the login stays hidden.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
+// Signing key (same key every build, so new versions install over old ones
+// without losing saved candidates). See keystore.properties.
+def ksProps = new Properties()
+def ksFile = rootProject.file('keystore.properties')
+if (ksFile.exists()) ksProps.load(new FileInputStream(ksFile))
+
+android {
+    namespace 'com.richcvmaker.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.globalcareerconnect.cvmaker'   // app ID: keep, so updates install over the installed app
+        minSdk 24          // Android 7.0 and newer
+        targetSdk 36      // Android 16: required by Google Play for new apps since 31 Aug 2026
+        versionCode 217      // raise by 1 for every new APK you share
+        versionName '4.97'
+    }
+
+    signingConfigs {
+        release {
+            storeFile rootProject.file(ksProps['storeFile'] ?: 'rich-release.jks')
+            storePassword ksProps['storePassword']
+            keyAlias ksProps['keyAlias']
+            keyPassword ksProps['keyPassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            // (v4.96) R8: shrink, optimise and obfuscate the Java code, and drop unused resources.
+            // Google Play warned "DEX code optimization is below our threshold" because this was off.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+        debug {
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'androidx.core:core:1.13.1'
+    // AdMob ads + Google's consent form (Europe / UK)
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    implementation 'com.google.android.ump:user-messaging-platform:3.1.0'
+    // Sign in with Google + access to the user's Drive app folder (CV backup)
+    implementation 'com.google.android.gms:play-services-auth:22.0.0'
+    // Google Play Billing (one-time "Unlock Premium"); version 8+ is required by Google Play
+    implementation 'com.android.billingclient:billing:8.0.0'
+    // Optional account: Firebase Authentication (email + password, Google) - free, no SMS
+    implementation platform('com.google.firebase:firebase-bom:35.2.0')
+    implementation 'com.google.firebase:firebase-auth'
+    // Google account picker for the login (Credential Manager)
+    implementation 'androidx.credentials:credentials:1.6.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.6.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.2.1'
+    // (v4.66) Photo background cleaner: finds the person in the CV photo on the phone, offline (model inside the app)
+    implementation 'com.google.mlkit:segmentation-selfie:16.0.0-beta6'
+}

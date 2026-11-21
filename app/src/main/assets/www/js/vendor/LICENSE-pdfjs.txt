@@ -1,0 +1,3 @@
+pdf.js 6.2.108 (legacy build), used by the "PDF to Image" tool.
+Copyright Mozilla Foundation. Licensed under the Apache License, Version 2.0:
+https://www.apache.org/licenses/LICENSE-2.0

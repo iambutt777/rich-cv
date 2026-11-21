@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "466404877747",
+    "project_id": "richcvmaker",
+    "storage_bucket": "richcvmaker.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466404877747:android:e7322677a86a9f3cc797c6",
+        "android_client_info": {
+          "package_name": "com.globalcareerconnect.cvmaker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "466404877747-ma64890k52itp8rpntpr2obsv9a5hv4f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9ZtY-iIo0bFFYchkTx1R2LVci8eoaY68"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "466404877747-ma64890k52itp8rpntpr2obsv9a5hv4f.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

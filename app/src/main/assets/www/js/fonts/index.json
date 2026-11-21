@@ -1,0 +1,107 @@
+[
+ {
+  "id": "poppins",
+  "name": "Poppins",
+  "hint": "Modern geometric"
+ },
+ {
+  "id": "carlito",
+  "name": "Carlito",
+  "hint": "Like Calibri"
+ },
+ {
+  "id": "caladea",
+  "name": "Caladea",
+  "hint": "Like Cambria"
+ },
+ {
+  "id": "adventor",
+  "name": "Adventor",
+  "hint": "Like Avant Garde"
+ },
+ {
+  "id": "pagella",
+  "name": "Pagella",
+  "hint": "Like Palatino"
+ },
+ {
+  "id": "bonum",
+  "name": "Bonum",
+  "hint": "Like Bookman"
+ },
+ {
+  "id": "schola",
+  "name": "Schola",
+  "hint": "Like Century Schoolbook"
+ },
+ {
+  "id": "heroscn",
+  "name": "Heros Condensed",
+  "hint": "Narrow, fits more text"
+ },
+ {
+  "id": "dejavusans",
+  "name": "DejaVu Sans",
+  "hint": "Wide and very readable"
+ },
+ {
+  "id": "dejavuserif",
+  "name": "DejaVu Serif",
+  "hint": "Strong classic serif"
+ },
+ {
+  "id": "inter",
+  "name": "Inter",
+  "hint": "Clean and modern"
+ },
+ {
+  "id": "lora",
+  "name": "Lora",
+  "hint": "Elegant book serif"
+ },
+ {
+  "id": "latolight",
+  "name": "Lato Light",
+  "hint": "Light and friendly"
+ },
+ {
+  "id": "poppinslight",
+  "name": "Poppins Light",
+  "hint": "Thin and stylish"
+ },
+ {
+  "id": "lmroman",
+  "name": "Latin Modern",
+  "hint": "Academic classic"
+ },
+ {
+  "id": "lmsans",
+  "name": "Latin Modern Sans",
+  "hint": "Soft and simple"
+ },
+ {
+  "id": "kerkissans",
+  "name": "Kerkis Sans",
+  "hint": "Round and open"
+ },
+ {
+  "id": "loma",
+  "name": "Loma",
+  "hint": "Wide and friendly"
+ },
+ {
+  "id": "sourcecode",
+  "name": "Source Code",
+  "hint": "Tech and coding jobs"
+ },
+ {
+  "id": "lmmono",
+  "name": "Typewriter Light",
+  "hint": "Light typewriter"
+ },
+ {
+  "id": "josefin",
+  "name": "Josefin Sans",
+  "hint": "Elegant geometric"
+ }
+]

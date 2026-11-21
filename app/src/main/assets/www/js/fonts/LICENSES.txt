@@ -1,0 +1,17 @@
+Fonts included in Rich CV Maker (converted to outlines by tools/build_fonts.py). All are free to use and embed:
+
+Poppins            SIL Open Font License 1.1 (Indian Type Foundry)
+Carlito            SIL Open Font License 1.1 (tyPoland, Lukasz Dziedzic)
+Caladea            Apache License 2.0 (Carolina Giovagnoli, Andres Torresi, Huerta Tipografica)
+TeX Gyre Adventor, Pagella, Bonum, Schola, Heros Condensed
+                   GUST Font License (GUST e-foundry)
+DejaVu Sans, DejaVu Serif
+                   Bitstream Vera Fonts License with DejaVu changes in the public domain
+Helvetica, Times, Courier: standard PDF fonts built into every PDF reader.
+Added in v3.66:
+Inter, Lora, Lato, Poppins (Light/Medium), Source Code Pro: SIL Open Font License 1.1.
+Latin Modern Roman / Sans / Mono Light (GUST e-foundry): GUST Font License (free to use and embed).
+Kerkis Sans: LaTeX Project Public License (free to use and embed).
+Loma (Thai Linux Working Group): GPL with font exception (free to embed in documents).
+Added in v4.76:
+Josefin Sans (Santiago Orozco, Typemade): SIL Open Font License 1.1 (free to use and embed). Source: Google Fonts.

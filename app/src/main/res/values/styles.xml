@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app icon background -->
+    <color name="navy">#11224A</color>
+    <!-- launcher icon background (the logo is on black) -->
+    <color name="icon_bg">#FFFFFF</color>
+    <!-- status bar, matches the app header -->
+    <color name="navy_bar">#0A1A47</color>
+    <!-- app background (matches the light interface, no flash on start) -->
+    <color name="paper">#F8FAFD</color>
+    <!-- loading screen background (window shows this before the page draws) -->
+    <color name="splash_bg">#070F2E</color>
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/paper</item>
+        <item name="android:colorPrimaryDark">@color/paper</item>
+        <item name="android:colorAccent">#0B57D0</item>
+        <item name="android:statusBarColor">@color/navy_bar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- dark navigation bar on Android 7-8.0, where its icons cannot be dark -->
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowBackground">@drawable/splash_window</item>
+    </style>
+</resources>

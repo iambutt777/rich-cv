@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Rich CV Maker : Resume Builder</title>
+<meta name="theme-color" content="#0A1A47">
+<script>/* apply the saved Display size before anything is drawn (default: Small) */
+(function () { var v = 0.85; try { var s = parseFloat(localStorage.getItem('richDisplaySize')); if ([0.75, 0.85].indexOf(s) >= 0) v = s; } catch (e) {}
+  var d = document.documentElement; d.style.setProperty('--ui-zoom', String(v)); if (v !== 1) d.style.zoom = String(v);
+  if (v >= 1) d.setAttribute('data-ui-big', v > 1 ? '2' : '1');
+  d.style.setProperty('--sp-z', String(0.85 / v)); d.dataset.uiSize = v >= 0.85 ? 'large' : 'small'; })();   /* loading screen: same size at every display size */</script>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="bg-fx" aria-hidden="true"></div>
+<!-- Loading screen -->
+<div class="splash" id="splash" role="status" aria-label="Loading Rich CV Maker">
+  <div class="fx-grid" aria-hidden="true"></div>
+  <div class="fx-stars" aria-hidden="true"></div>
+  <div class="splash-inner">
+    <div class="fx-core">
+      <span class="fx-ring r1"></span><span class="fx-ring r2"></span><span class="fx-ring r3"></span>
+      <span class="fx-orbit"><i></i></span>
+      <img class="splash-logo" id="splashLogo" alt="">
+    </div>
+    <div class="splash-name">Rich <b>CV</b> Maker</div>
+    <div class="splash-tag">Resume Builder</div>
+    <div class="fx-hud">
+      <div class="fx-row"><span class="fx-status" id="splashStatus">Starting up…</span><span class="fx-pct" id="splashPct">0%</span></div>
+      <div class="splash-bar"><i id="splashFill"></i></div>
+      <div class="fx-log" id="splashLog" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+<!-- the loading screen runs for 3 seconds: progress, status lines -->
+<script>(function () {
+  var MS = 3000, t0 = Date.now(), fast = false;
+  try { fast = sessionStorage.getItem('richReopenSettings') === '1'; } catch (e) {}
+  if (fast) MS = 1200;                       // quick after a language change restart
+  window.RICH_SPLASH_MS = MS; window.RICH_SPLASH_T0 = t0;
+  var steps = ['Starting up…', 'Loading CV templates…', 'Preparing colour themes…', 'Setting up PDF tools…', 'Securing your data…', 'Almost ready…'];
+  var st = document.getElementById('splashStatus'), pc = document.getElementById('splashPct'),
+      fill = document.getElementById('splashFill'), log = document.getElementById('splashLog'), last = -1;
+  function frame() {
+    var k = Math.min(1, (Date.now() - t0) / MS), e = 1 - Math.pow(1 - k, 1.5);
+    var p = Math.round(e * 100);
+    fill.style.width = p + '%'; pc.textContent = p + '%';
+    var i = Math.min(steps.length - 1, Math.floor(k * steps.length));
+    if (i !== last) {
+      if (last >= 0) { var d = document.createElement('div'); d.textContent = steps[last]; log.insertBefore(d, log.firstChild); while (log.children.length > 2) log.removeChild(log.lastChild); }
+      st.textContent = steps[i]; last = i;
+    }
+    if (k < 1) requestAnimationFrame(frame); else { st.textContent = 'Ready'; }
+  }
+  requestAnimationFrame(frame);
+  // the Android app shows the logo by itself until this screen is drawn, then hands over
+  requestAnimationFrame(function () { requestAnimationFrame(function () {
+    try { if (window.AndroidBridge && AndroidBridge.splashShown) AndroidBridge.splashShown(); } catch (e) {}
+  }); });
+})();</script>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <button class="back-btn" id="goBack" type="button" aria-label="Back" title="Back" tabindex="-1">
+        <span class="back-ring" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="back-shaft" d="M20 12H5"/><path class="back-head" d="M11 5l-7 7 7 7"/></svg>
+      </button>
+      <img class="brand-logo" id="brandLogo" alt="Rich CV Maker logo">
+      <div class="brand-text">
+        <span class="brand-name">Rich <span class="bn-cv">CV</span> Maker<b class="pro-chip brand-pro" aria-label="Pro">PRO</b></span>
+        <span class="brand-tag">Resume Builder</span>
+      </div>
+    </div>
+    <nav class="views" aria-label="Sections">
+      <button class="icon-btn home-btn" id="goHome" type="button" aria-label="Home" title="Home">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>
+      </button>
+      <button class="icon-btn" id="topDl" type="button" aria-label="Download" title="Download"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg></button>
+      <button class="icon-btn" id="topMenu" type="button" aria-label="Menu" aria-haspopup="menu" aria-expanded="false" title="Menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="view-tab is-active" data-view="edit" type="button">Edit</button>
+      <button class="view-tab" data-view="design" type="button">Design</button>
+      <button class="icon-btn" id="openSettings" type="button" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class="gear"><path fill="currentColor" fill-rule="evenodd" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" d="M18.69 9.93 L21.46 10.38 L21.46 13.62 L18.69 14.07 L18.19 15.27 L19.84 17.54 L17.54 19.84 L15.27 18.19 L14.07 18.69 L13.62 21.46 L10.38 21.46 L9.93 18.69 L8.73 18.19 L6.46 19.84 L4.16 17.54 L5.81 15.27 L5.31 14.07 L2.54 13.62 L2.54 10.38 L5.31 9.93 L5.81 8.73 L4.16 6.46 L6.46 4.16 L8.73 5.81 L9.93 5.31 L10.38 2.54 L13.62 2.54 L14.07 5.31 L15.27 5.81 L17.54 4.16 L19.84 6.46 L18.19 8.73Z M15.2 12a3.2 3.2 0 1 0-6.4 0a3.2 3.2 0 1 0 6.4 0Z"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+<div class="qd-ov" id="homeAsk" role="dialog" aria-modal="true" aria-labelledby="haT" hidden>
+  <div class="qd-box">
+    <span class="qd-ic qd-ic-save" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg></span>
+    <h2 id="haT" class="qd-t">Save your CV?</h2>
+    <p class="qd-p">You have changes that are not saved yet. Save them before going to Home?</p>
+    <button type="button" class="qd-main" data-ha="save"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Save and go Home</span></button>
+    <button type="button" class="qd-sec" data-ha="nosave"><span>Go Home without saving</span></button>
+    <button type="button" class="qd-link" data-ha="stay">Stay here</button>
+  </div>
+</div>
+<div class="qd-ov dl-ov" id="dlAsk" role="dialog" aria-modal="true" aria-labelledby="dlT" hidden>
+  <div class="qd-box dlx">
+    <button type="button" class="dlx-x" data-dl="cancel" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <span class="dlx-ic" aria-hidden="true"><i class="dlx-spark"><b></b><b></b></i><svg viewBox="0 0 24 24"><path d="M12 4.5v9.5M8 10.5l4 4 4-4M6 15.5v2.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2.5"/></svg></span>
+    <h2 id="dlT" class="dlx-t">Download your CV</h2>
+    <p class="dlx-p">Choose a file type</p>
+    <div class="dlx-list">
+      <button type="button" class="dlx-opt" data-dl="pdf"><span class="dlx-fi" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M10 4h20l10 10v28a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="#E5252A"/><path d="M30 4l10 10h-8a2 2 0 0 1-2-2z" fill="#FF8A8A"/><path d="M24 10.5c-1.5 0-1.2 3.6.7 7.8 1.6 3.5 4.3 6.6 6.2 7 1.9.4 2.1-1.4.4-1.9-2.5-.6-7.3.5-10.4 2-2.8 1.4-3.8 3.4-2.4 3.8 1.5.4 3.3-2.4 4.6-6 1.5-4 2.1-8.8 1-12.5z" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><text x="24" y="40.5" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="9" fill="#fff">PDF</text></svg></span>
+        <span class="dlx-tx"><b>PDF Document</b><small>Best for sending and printing</small></span><svg class="dlx-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button type="button" class="dlx-opt" data-dl="jpg"><span class="dlx-fi" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="#1E6BF0"/><rect x="12" y="13" width="24" height="22" rx="3.5" fill="none" stroke="#fff" stroke-width="3"/><path d="M13.5 33l7-7.5 5 5 3.5-3.5 5.5 6z" fill="#fff"/><circle cx="29" cy="19.5" r="2.4" fill="#fff"/></svg></span>
+        <span class="dlx-tx"><b>JPG Picture</b><small>Easy to post or send in chats</small></span><svg class="dlx-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button type="button" class="dlx-opt" data-dl="docx"><span class="dlx-fi" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 4h20l8 8v30a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="#4A8BFF"/><path d="M34 4l8 8h-6a2 2 0 0 1-2-2z" fill="#A9C8FF"/><rect x="4" y="14" width="26" height="24" rx="4" fill="#1550D6"/><path d="M10 20.5l2.6 11.5 3.4-8.6 3.4 8.6 2.6-11.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="dlx-tx"><b>Word Document</b><small>Editable format</small></span><svg class="dlx-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+  </div>
+</div>
+<div class="top-menu" id="topMenuBox" role="menu" hidden>
+  <button type="button" role="menuitem" data-tm="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>Home</span></button>
+  <button type="button" role="menuitem" data-tm="save"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg><span>Save CV</span></button>
+  <button type="button" role="menuitem" data-tm="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button>
+</div>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section class="view hv2" id="view-home">
+    <!-- (v4.96) Home redesign: hero, recent CVs (or a welcome card), My CVs / Downloads, PDF Tools, Upgrade to Pro -->
+    <div class="hv-hero">
+      <div class="hv-hero-text">
+        <h1 class="hv-h1">Create Your Professional <b>CV</b></h1>
+        <p class="hv-sub">Stand out from the crowd</p>
+        <button type="button" class="hv-cta" id="homeCreate"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg><span>Create CV</span><svg class="hv-arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+      <svg class="hv-doc" viewBox="0 0 200 190" aria-hidden="true">
+        <defs>
+          <linearGradient id="hvPaper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E4EDFC"/></linearGradient>
+          <linearGradient id="hvBand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D8BFF"/><stop offset="1" stop-color="#1840C8"/></linearGradient>
+          <linearGradient id="hvBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FC2FF"/><stop offset="1" stop-color="#4E7FE8"/></linearGradient>
+          <linearGradient id="hvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE38A"/><stop offset="1" stop-color="#F2A900"/></linearGradient>
+          <linearGradient id="hvPen" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0E2366"/><stop offset=".5" stop-color="#2A4FC2"/><stop offset="1" stop-color="#0E2366"/></linearGradient>
+          <radialGradient id="hvFace" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#FFD9BC"/><stop offset="1" stop-color="#E9B58E"/></radialGradient>
+          <clipPath id="hvAv"><circle cx="0" cy="0" r="15"/></clipPath>
+          <clipPath id="hvTop"><rect x="70" y="14" width="108" height="150" rx="11"/></clipPath>
+        </defs>
+        <!-- back sheet -->
+        <g transform="rotate(-9 110 96)"><rect x="62" y="20" width="104" height="146" rx="11" fill="url(#hvBack)" opacity=".75"/>
+          <rect x="74" y="40" width="50" height="5" rx="2.5" fill="#fff" opacity=".55"/><rect x="74" y="51" width="70" height="4" rx="2" fill="#fff" opacity=".4"/></g>
+        <!-- front sheet -->
+        <g transform="rotate(7 124 90)">
+          <rect x="70" y="14" width="108" height="150" rx="11" fill="#061A5A" opacity=".35" transform="translate(4 7)"/>
+          <rect x="70" y="14" width="108" height="150" rx="11" fill="url(#hvPaper)"/>
+          <g clip-path="url(#hvTop)"><rect x="70" y="14" width="108" height="44" fill="url(#hvBand)"/>
+            <path d="M70 52c30 10 70-8 108 2v6H70z" fill="#fff" opacity=".18"/></g>
+          <g transform="translate(94 38)"><circle r="17" fill="#fff"/><circle r="15" fill="#CFE6FF"/>
+            <g clip-path="url(#hvAv)"><path d="M-14 17c1.5-9 7-12.5 14-12.5S12.5 8 14 17z" fill="#16213F"/><path d="M-4 5l4 7 4-7z" fill="#fff"/><path d="M-1.4 6.5h2.8l.8 9h-4.4z" fill="#1F4FD8"/>
+            <circle cy="-3" r="7.2" fill="url(#hvFace)"/><path d="M-7.6 -4.2c0-6 3.4-8.6 7.6-8.6s7.6 2.6 7.6 8c-2-2.7-4.6-3.3-7.6-3.3s-5.4.6-7.6 3.9z" fill="#2B1A12"/></g></g>
+          <rect x="117" y="28" width="48" height="7" rx="3.5" fill="#fff"/><rect x="117" y="40" width="34" height="4.5" rx="2.25" fill="#fff" opacity=".75"/>
+          <rect x="117" y="48" width="24" height="3.5" rx="1.75" fill="#FFD54A"/>
+          <rect x="80" y="68" width="34" height="5" rx="2.5" fill="#1F55E0"/>
+          <circle cx="82.5" cy="80" r="2" fill="#1F55E0"/><rect x="88" y="78" width="72" height="4" rx="2" fill="#B9CBEA"/>
+          <circle cx="82.5" cy="89" r="2" fill="#1F55E0"/><rect x="88" y="87" width="62" height="4" rx="2" fill="#B9CBEA"/>
+          <circle cx="82.5" cy="98" r="2" fill="#1F55E0"/><rect x="88" y="96" width="68" height="4" rx="2" fill="#B9CBEA"/>
+          <rect x="80" y="110" width="28" height="5" rx="2.5" fill="#1F55E0"/>
+          <rect x="80" y="121" width="58" height="4.5" rx="2.25" fill="#DCE6F7"/><rect x="80" y="121" width="46" height="4.5" rx="2.25" fill="#3D8BFF"/>
+          <rect x="80" y="131" width="58" height="4.5" rx="2.25" fill="#DCE6F7"/><rect x="80" y="131" width="36" height="4.5" rx="2.25" fill="#3D8BFF"/>
+          <rect x="80" y="141" width="58" height="4.5" rx="2.25" fill="#DCE6F7"/><rect x="80" y="141" width="52" height="4.5" rx="2.25" fill="#3D8BFF"/>
+          <!-- gold seal -->
+          <g transform="translate(160 138)"><path d="M-6 6l-3 13 9-5 9 5-3-13z" fill="#E08A00"/>
+            <circle r="11" fill="url(#hvGold)" stroke="#fff" stroke-width="1.6"/><path d="M-4.6 0.4l3.2 3.2 6.2-6.6" fill="none" stroke="#7A4A00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
+        </g>
+        <!-- pen -->
+        <g transform="rotate(-38 70 150)"><rect x="40" y="146" width="62" height="9" rx="4.5" fill="url(#hvPen)"/><rect x="88" y="146" width="7" height="9" fill="url(#hvGold)"/>
+          <path d="M102 146.6l12 3.9-12 3.9z" fill="#F4D9A8"/><path d="M110 149.3l4 1.2-4 1.2z" fill="#0E2366"/><rect x="46" y="143.5" width="26" height="3" rx="1.5" fill="url(#hvGold)"/></g>
+        <!-- sparkles -->
+        <path d="M52 30c.8 5 3.2 7.4 8 8.2-4.8.8-7.2 3.2-8 8.2-.8-5-3.2-7.4-8-8.2 4.8-.8 7.2-3.2 8-8.2z" fill="#FFE38A"/>
+        <path d="M188 12c.5 3.2 2 4.7 5 5.2-3 .5-4.5 2-5 5.2-.5-3.2-2-4.7-5-5.2 3-.5 4.5-2 5-5.2z" fill="#fff"/>
+        <path d="M190 160c.4 2.6 1.6 3.8 4 4.2-2.4.4-3.6 1.6-4 4.2-.4-2.6-1.6-3.8-4-4.2 2.4-.4 3.6-1.6 4-4.2z" fill="#9FE6FF"/>
+      </svg>
+    </div>
+
+    <section class="hv-panel hv-recent" id="homeRecent" hidden>
+      <div class="hv-head">
+        <span class="hv-hic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+        <h2 class="hv-h2">Recent CVs</h2>
+        <button type="button" class="hv-link" id="homeSeeAll"><span>See All</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="hv-rlist" id="recentList"></div>
+    </section>
+
+    <section class="hv-panel hv-welcome" id="homeWelcome" hidden>
+      <svg class="hv-wart" viewBox="0 0 120 110" aria-hidden="true">
+        <defs><linearGradient id="hvWp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#DDE8FB"/></linearGradient>
+        <linearGradient id="hvWb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4A8CFF"/><stop offset="1" stop-color="#1747B8"/></linearGradient></defs>
+        <circle cx="60" cy="56" r="50" fill="#E8F0FF"/>
+        <rect x="30" y="14" width="56" height="74" rx="8" fill="url(#hvWp)" stroke="#C9D9F6" stroke-width="2"/>
+        <circle cx="46" cy="34" r="8" fill="#2F6BFF"/><rect x="58" y="28" width="20" height="5" rx="2.5" fill="#2F6BFF"/><rect x="58" y="37" width="14" height="4" rx="2" fill="#A9BFE8"/>
+        <rect x="38" y="52" width="40" height="4" rx="2" fill="#C2D2EE"/><rect x="38" y="60" width="34" height="4" rx="2" fill="#C2D2EE"/><rect x="38" y="68" width="38" height="4" rx="2" fill="#C2D2EE"/>
+        <circle cx="86" cy="80" r="15" fill="url(#hvWb)" stroke="#fff" stroke-width="3"/><path d="M86 73v14M79 80h14" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M18 30l2 5 5 2-5 2-2 5-2-5-5-2 5-2z M100 18l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z" fill="#FFC531"/>
+      </svg>
+      <div class="hv-wtext">
+        <h2 class="hv-h2">Welcome to Rich CV Maker</h2>
+        <p>Create your first professional CV in minutes.</p>
+        <button type="button" class="hv-wbtn" id="homeFirst"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Create Your First CV</span></button>
+      </div>
+    </section>
+
+    <div class="hv-pair">
+      <button type="button" class="hv-big hv-blue" id="homeCvs"><span class="hv-bart"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gpB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#E1E4FA"/></linearGradient></defs>
+          <g transform="rotate(-10 22 34)"><rect x="6" y="12" width="32" height="42" rx="4" fill="#C9CEF2"/><circle cx="16" cy="26" r="3.6" fill="#3B5BDB"/><path stroke="#5A6FD8" stroke-width="2.4" stroke-linecap="round" d="M11 36h18M11 41h14"/></g>
+          <path fill="url(#gpB)" d="M22 8h22l10 10v36a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4z"/><path fill="#C8CCEF" d="M44 8v7a3 3 0 0 0 3 3h7z"/>
+          <circle cx="30" cy="25" r="4.6" fill="#2F5BEA"/><path fill="#2F5BEA" d="M22.5 37c0-4.6 3.4-7.4 7.5-7.4s7.5 2.8 7.5 7.4z"/>
+          <path stroke="#3A57C9" stroke-width="2.8" stroke-linecap="round" d="M40 24h8M40 30h7M24 43h24M24 49h18"/></svg></span><span class="hv-btext"><b>My CVs</b><span>View &amp; Manage</span></span><span class="count hc-count" id="cvCount" hidden>0</span><span class="hv-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+      <button type="button" class="hv-big hv-green" id="homeDownloads"><span class="hv-bart"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gpC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#DCEBF5"/></linearGradient><linearGradient id="gaC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3FB4FF"/><stop offset="1" stop-color="#1557E6"/></linearGradient><linearGradient id="gkC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4BE07A"/><stop offset="1" stop-color="#12A64A"/></linearGradient></defs>
+          <path fill="url(#gpC)" d="M12 6h26l12 12v36a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4z"/><path fill="#C3D6E6" d="M38 6v8a4 4 0 0 0 4 4h8z"/>
+          <path fill="url(#gaC)" d="M24 18h8v14h7L28 44 17 32h7z"/>
+          <circle cx="47" cy="46" r="11.5" fill="url(#gkC)" stroke="#fff" stroke-width="2.5"/><path fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M41.5 46.5l4 4 7.5-8"/></svg></span><span class="hv-btext"><b>Downloads</b><span>Your Files</span></span><span class="count hc-count" id="dlCount" hidden>0</span><span class="hv-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+    </div>
+
+    <section class="hv-tools">
+      <div class="hv-tbar">
+        <span class="hv-tic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0 5 5L22 14l-3 3-2.3-2.3a4 4 0 0 0-5-5zM3 21l7.5-7.5M5 3l4 4-2 2-4-4z"/></svg></span>
+        <h2 class="hv-h2">PDF Tools</h2>
+        <button type="button" class="hv-all" id="homeAllTools"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg><span>All Tools</span></button>
+      </div>
+      <div class="hv-tgrid">
+      <button type="button" class="home-card hcv hct t-blue is-tool" data-tool-open="merge" style="--i:3">
+        <span class="hc-art"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gwD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2D4FB8"/><stop offset="1" stop-color="#0E1F5C"/></linearGradient><linearGradient id="gsD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE45C"/><stop offset="1" stop-color="#FFB300"/></linearGradient></defs>
+          <path fill="url(#gwD)" d="M10 50l26-26 5 5-26 26a3.5 3.5 0 0 1-5-5z"/><path fill="#9CC2FF" d="M36 24l3-3 5 5-3 3z"/>
+          <path fill="url(#gsD)" d="M45 6l2.6 6 6.4.6-4.8 4.3 1.4 6.3L45 20l-5.6 3.2 1.4-6.3L36 12.6l6.4-.6z"/>
+          <path fill="url(#gsD)" d="M24 10l1.5 3.4 3.6.3-2.7 2.4.8 3.6L24 17.9l-3.2 1.8.8-3.6-2.7-2.4 3.6-.3zM53 30l1.3 2.8 3 .3-2.3 2 .7 3-2.7-1.6-2.7 1.6.7-3-2.3-2 3-.3z"/><circle cx="31" cy="20" r="1.6" fill="#FFC21A"/><circle cx="50" cy="42" r="1.4" fill="#FFC21A"/></svg></span>
+        <span class="hc-text">Merge PDF<span class="hc-sub">Join files</span></span>
+        <span class="hc-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button type="button" class="home-card hcv hct t-violet is-tool" data-tool-open="split" style="--i:4">
+        <span class="hc-art"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gcE" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D7BFF"/><stop offset="1" stop-color="#1A3FB8"/></linearGradient></defs>
+          <path fill="#1B2F7A" d="M22 40L52 8l4 4-30 32z"/><path fill="url(#gcE)" d="M24 24L56 52l-4 4L22 28z"/>
+          <circle cx="16" cy="18" r="8.5" fill="none" stroke="url(#gcE)" stroke-width="5"/><circle cx="16" cy="48" r="8.5" fill="none" stroke="#1B2F7A" stroke-width="5"/><circle cx="31" cy="33" r="2.6" fill="#BFD4FF"/></svg></span>
+        <span class="hc-text">Split PDF<span class="hc-sub">Take pages out</span></span>
+        <span class="hc-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button type="button" class="home-card hcv hct t-mint is-tool" data-tool-open="images" style="--i:5">
+        <span class="hc-art"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gfF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D8BFF"/><stop offset="1" stop-color="#1846C8"/></linearGradient><linearGradient id="gkF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D8F0FF"/><stop offset="1" stop-color="#9FD3FF"/></linearGradient></defs>
+          <rect x="6" y="9" width="52" height="46" rx="8" fill="url(#gfF)"/><rect x="11" y="14" width="42" height="36" rx="4" fill="url(#gkF)"/>
+          <circle cx="40" cy="24" r="5" fill="#FFB62E"/><path fill="#1F5FD8" d="M11 50l14-17 9 10 6-6 13 13z"/><path fill="#3F86F5" d="M11 50l14-17 6 7-8 10z"/></svg></span>
+        <span class="hc-text">Image to PDF<span class="hc-sub">Photos to a PDF</span></span>
+        <span class="hc-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button type="button" class="home-card hcv hct t-peach is-tool" data-tool-open="toimage" style="--i:6">
+        <span class="hc-art"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gfG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D8BFF"/><stop offset="1" stop-color="#1846C8"/></linearGradient><linearGradient id="gbG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4AA8FF"/><stop offset="1" stop-color="#1450E0"/></linearGradient></defs>
+          <rect x="4" y="8" width="48" height="42" rx="8" fill="url(#gfG)"/><rect x="9" y="13" width="38" height="32" rx="4" fill="#E2F3FF"/>
+          <circle cx="36" cy="22" r="4.5" fill="#6EC1FF"/><path fill="#2DB34A" d="M9 45l12-15 8 9 5-5 13 11z"/><path fill="#5BD06E" d="M9 45l12-15 5 6-7 9z"/>
+          <circle cx="48" cy="46" r="11.5" fill="url(#gbG)" stroke="#fff" stroke-width="2.5"/><path fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M48 52V40.5M43 45.5l5-5 5 5"/></svg></span>
+        <span class="hc-text">PDF to Image<span class="hc-sub">JPG or PNG</span></span>
+        <span class="hc-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button type="button" class="home-card hcv hct t-cyan is-tool" data-tool-open="rotate" style="--i:7">
+        <span class="hc-art"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="grH" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2FA8FF"/><stop offset="1" stop-color="#1450E0"/></linearGradient></defs>
+          <path fill="none" stroke="url(#grH)" stroke-width="8" stroke-linecap="round" d="M12 30a20 20 0 0 1 34-13"/><path fill="#1E6BF0" d="M52 6v18H34z"/>
+          <path fill="none" stroke="url(#grH)" stroke-width="8" stroke-linecap="round" d="M52 34a20 20 0 0 1-34 13"/><path fill="#1E6BF0" d="M12 58V40h18z"/></svg></span>
+        <span class="hc-text">Rotate PDF<span class="hc-sub">Turn pages</span></span>
+        <span class="hc-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </button>
+      <button type="button" class="home-card hcv hct t-peri is-tool" data-tool-open="numbers" style="--i:8">
+        <span class="hc-art"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="gpI" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#DCE5F7"/></linearGradient><linearGradient id="gnI" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2E5BE0"/><stop offset="1" stop-color="#0F2A80"/></linearGradient></defs>
+          <path fill="url(#gpI)" d="M10 4h24l10 10v38a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z"/><path fill="#C4D2EE" d="M34 4v7a3 3 0 0 0 3 3h7z"/>
+          <circle cx="16" cy="20" r="4.2" fill="#2F6BF2"/><path fill="#2F6BF2" d="M9.5 31c0-4 2.9-6.4 6.5-6.4s6.5 2.4 6.5 6.4z"/><path stroke="#3A63C9" stroke-width="2.6" stroke-linecap="round" d="M26 19h8M26 25h6M12 39h12M12 45h10"/>
+          <rect x="28" y="30" width="32" height="28" rx="6" fill="url(#gnI)" stroke="#fff" stroke-width="2.5"/><text x="44" y="50" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-weight="700" font-size="14" fill="#fff">1 2 3</text></svg></span>
+        <span class="hc-text">Page Numbers<span class="hc-sub">Number every page</span></span>
+        <span class="hc-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </button>
+      </div>
+    </section>
+
+    <button type="button" class="hv-pro" id="homeGoPro">
+      <svg class="hv-crown" viewBox="0 0 96 64" aria-hidden="true">
+        <defs><linearGradient id="hvGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFEBA3"/><stop offset=".5" stop-color="#F7C23A"/><stop offset="1" stop-color="#C98400"/></linearGradient></defs>
+        <path d="M14 52c-8-6-10-16-6-26M82 52c8-6 10-16 6-26" fill="none" stroke="#D9A42A" stroke-width="3" stroke-linecap="round"/>
+        <g fill="#E9B43A"><ellipse cx="9" cy="32" rx="3" ry="6" transform="rotate(-25 9 32)"/><ellipse cx="11" cy="43" rx="3" ry="6" transform="rotate(-45 11 43)"/><ellipse cx="87" cy="32" rx="3" ry="6" transform="rotate(25 87 32)"/><ellipse cx="85" cy="43" rx="3" ry="6" transform="rotate(45 85 43)"/></g>
+        <path d="M26 46L22 18l14 12 12-20 12 20 14-12-4 28z" fill="url(#hvGold)" stroke="#A86A00" stroke-width="2" stroke-linejoin="round"/>
+        <rect x="25" y="45" width="46" height="8" rx="3" fill="url(#hvGold)" stroke="#A86A00" stroke-width="2"/>
+        <circle cx="22" cy="17" r="4" fill="#FFEBA3"/><circle cx="48" cy="9" r="4.5" fill="#FFEBA3"/><circle cx="74" cy="17" r="4" fill="#FFEBA3"/><circle cx="48" cy="38" r="3.5" fill="#E8344E"/>
+      </svg>
+      <span class="hv-ptext"><b>Upgrade to <i>Pro</i></b><span>Unlock Premium Features</span></span>
+      <span class="hv-pbtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18l-1-11 6 5 4-7 4 7 6-5-1 11z"/></svg>Go Pro<svg viewBox="0 0 24 24" aria-hidden="true" class="hv-arr"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </button>
+  </section>
+
+  <!-- ============ DOWNLOADS ============ -->
+  <section class="view" id="view-downloads" hidden>
+    <div class="records-head">
+      <div class="rh-title">
+        <span class="rh-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><linearGradient id="dlA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4BE0A6"/><stop offset="1" stop-color="#0E9F6E"/></linearGradient><linearGradient id="dlB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3FB4FF"/><stop offset="1" stop-color="#1557E6"/></linearGradient></defs>
+          <path fill="url(#dlA)" d="M14 5h24l12 12v37a5 5 0 0 1-5 5H14a5 5 0 0 1-5-5V10a5 5 0 0 1 5-5z"/><path fill="#B6F0D8" d="M38 5v8a4 4 0 0 0 4 4h8z"/>
+          <path fill="url(#dlB)" stroke="#fff" stroke-width="2.5" stroke-linejoin="round" d="M24 18h10v15h8L29 47 16 33h8z"/>
+          <circle cx="48" cy="48" r="11" fill="#fff"/><circle cx="48" cy="48" r="8.5" fill="#12A150"/><path fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" d="M44 48.3l3 3 5.4-5.8"/></svg></span>
+        <div class="rh-text"><h1>Downloads</h1><span class="rh-sub">Open, share or save your files again</span></div>
+      </div>
+    </div>
+    <div class="ad-slot" data-ad="downloads_top" data-size="banner" hidden></div>
+    <div id="dlList" class="dl-list"></div>
+  </section>
+
+  <!-- ============ PDF TOOLS ============ -->
+  <section class="view" id="view-tools" hidden>
+    <div class="records-head">
+      <div class="rh-title">
+        <span class="rh-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><linearGradient id="tlA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FB4FF"/><stop offset="1" stop-color="#1557E6"/></linearGradient><linearGradient id="tlB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8A8A"/><stop offset="1" stop-color="#E03131"/></linearGradient></defs>
+          <path fill="url(#tlA)" d="M14 5h24l12 12v37a5 5 0 0 1-5 5H14a5 5 0 0 1-5-5V10a5 5 0 0 1 5-5z"/><path fill="#9FD3FF" d="M38 5v8a4 4 0 0 0 4 4h8z"/>
+          <rect x="13" y="26" width="26" height="13" rx="4" fill="url(#tlB)"/><text x="26" y="36" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-weight="700" font-size="9" fill="#fff">PDF</text>
+          <path stroke="#fff" stroke-width="3" stroke-linecap="round" d="M15 46h20M15 52h13"/>
+          <circle cx="48" cy="47" r="12" fill="#0E2F8F" stroke="#fff" stroke-width="3"/><path fill="#fff" d="M53.7 43.3l-1.8 1.8-1.5-.2-.2-1.5 1.8-1.8a3.6 3.6 0 0 0-4.6 4.6l-4.7 4.7a1.4 1.4 0 1 0 2 2l4.7-4.7a3.6 3.6 0 0 0 4.3-4.9z"/></svg></span>
+        <div class="rh-text"><h1 id="toolTitle">PDF Tools</h1><span class="rh-sub">Merge, split, convert and number your PDFs</span></div>
+      </div>
+    </div>
+    <div class="seg tool-switch" id="toolSwitch" role="tablist">
+      <button type="button" data-ptool="merge" role="tab">Merge</button><button type="button" data-ptool="split" role="tab">Split</button><button type="button" data-ptool="images" role="tab">Image to PDF</button><button type="button" data-ptool="toimage" role="tab">PDF to Image</button><button type="button" data-ptool="rotate" role="tab">Rotate</button><button type="button" data-ptool="numbers" role="tab">Page numbers</button>
+    </div>
+    <div class="sheet ptool" id="ptoolPanel"></div>
+    <div class="ad-zone ad-zone-tools"><div class="ad-slot" data-ad="tools_bottom" data-size="mrec" hidden></div></div>
+  </section>
+
+  <!-- ============ EDIT ============ -->
+  <section class="view" id="view-edit">
+    <div class="register-grid">
+      <form class="sheet" id="cvForm" novalidate autocomplete="off">
+        <div class="sheet-head">
+          <div class="sh-top">
+            <span class="sh-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><linearGradient id="shP" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FB4FF"/><stop offset="1" stop-color="#1557E6"/></linearGradient><linearGradient id="shB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2C8CFF"/><stop offset="1" stop-color="#0E3FC4"/></linearGradient></defs>
+              <path fill="url(#shP)" d="M12 4h24l12 12v38a5 5 0 0 1-5 5H12a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z"/><path fill="#9FD3FF" d="M36 4v8a4 4 0 0 0 4 4h8z"/>
+              <path stroke="#fff" stroke-width="3.2" stroke-linecap="round" d="M15 26h18M15 34h22M15 42h14"/><path stroke="#fff" stroke-width="3" stroke-linecap="round" d="M15 16h7M18.5 12.5v7"/>
+              <circle cx="47" cy="47" r="13" fill="url(#shB)" stroke="#fff" stroke-width="3"/><path stroke="#fff" stroke-width="3.6" stroke-linecap="round" d="M47 40.5v13M40.5 47h13"/></svg></span>
+            <div class="sh-text">
+              <h1 id="formTitle">New CV</h1>
+              <p class="record-state" id="recordState">Not saved yet.</p>
+            </div>
+          </div>
+          <p class="design-tip"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0 0 18c.8 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg><span>Fill in your details here. Choose the template, colours and fonts in the Design tab at the top.</span></p>
+        </div>
+        <p class="lang-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg><span>Write your CV in English. The PDF can print only English (Latin) letters.</span></p>
+
+        <fieldset class="block" data-sec="personal" data-page="1">
+          <legend><span class="num">1</span>Personal details</legend>
+          <div class="fields">
+            <div class="field half"><label for="firstName">First name <span class="req" aria-hidden="true">*</span></label>
+              <input id="firstName" maxlength="40" data-format="name" autocomplete="off" placeholder="John Michael"></div>
+            <div class="field half"><label for="lastName">Last name <em class="opt">(optional)</em></label>
+              <input id="lastName" maxlength="40" data-format="name" autocomplete="off" placeholder="Smith"></div>
+            <div class="field span-2"><label for="title">Job title you are applying for <span class="req" aria-hidden="true">*</span></label>
+              <div class="combo"><input id="title" data-combo maxlength="70" data-format="name" placeholder="Type or choose from the list" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false">
+                <button type="button" class="combo-btn" data-combo-open="title" aria-label="Show the list of job titles"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
+                <div class="combo-list" role="listbox" hidden></div></div></div>
+            <div class="field"><label for="phone">Phone <em class="opt">(optional)</em></label>
+              <input id="phone" inputmode="tel" maxlength="30" placeholder="+1 (555) 123-4567"></div>
+            <div class="field"><label for="email">Email <em class="opt">(optional)</em></label>
+              <input id="email" type="email" inputmode="email" autocapitalize="off" maxlength="100" placeholder="john.smith@example.com"></div>
+            <div class="field span-2"><label for="address">Address <em class="opt">(optional)</em></label>
+              <input id="address" maxlength="38" placeholder="245 Oak Street, Austin, TX"></div>
+            <div class="field span-2"><label for="linkedin">LinkedIn <em class="opt">(optional)</em></label>
+              <input id="linkedin" type="url" inputmode="url" autocapitalize="off" autocomplete="off" maxlength="120" placeholder="linkedin.com/in/john-smith"></div>
+            <div class="field span-2"><label for="website">Website <em class="opt">(optional)</em></label>
+              <input id="website" type="url" inputmode="url" autocapitalize="off" autocomplete="off" maxlength="120" placeholder="www.johnsmith.com"></div>
+            <div class="field"><label for="nationality">Nationality <em class="opt">(optional)</em></label>
+              <input id="nationality" maxlength="40" data-format="name" placeholder="American"></div>
+            <div class="field dob-field"><span class="label" id="dobLbl">Date of birth or age <em class="opt">(optional)</em></span>
+              <div class="seg seg-dob" id="dobMode" role="radiogroup" aria-labelledby="dobLbl">
+                <button type="button" data-dobmode="dob" role="radio" aria-checked="true">Date of birth</button><button type="button" data-dobmode="age" role="radio" aria-checked="false">Age</button>
+              </div>
+              <div class="date-wrap dob-wrap"><input id="dob" type="date" aria-label="Date of birth"><span class="dob-empty" aria-hidden="true">Not shown</span><span class="dd-arrow date-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></div>
+              <span class="age-wrap"><input id="age" type="number" inputmode="numeric" min="14" max="90" step="1" placeholder="28" aria-label="Age" hidden><span class="age-unit" aria-hidden="true">years old</span></span>
+              <button type="button" class="dob-clear" id="dobClear" hidden>Remove date of birth</button></div>
+            <div class="field half"><label for="gender">Gender <em class="opt">(optional)</em></label>
+              <select id="gender"><option value="">Not shown</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
+            <div class="field half"><label for="marital">Marital status <em class="opt">(optional)</em></label>
+              <select id="marital"><option value="">Not shown</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option><option>Separated</option></select></div>
+            <div class="field"><label for="passport">Passport no. <em class="opt">(optional)</em></label>
+              <input id="passport" maxlength="20" data-format="passport" autocapitalize="characters"></div>
+            <div class="field"><label for="licence">Driving licence <em class="opt">(optional)</em></label>
+              <input id="licence" maxlength="40" placeholder="Texas, Class C"></div>
+            <div class="field span-2">
+              <span class="label">Photo <em class="opt">(optional)</em></span>
+              <div class="photo-row">
+                <div class="photo-wrap">
+                  <button type="button" class="photo-frame" id="photoFrame" aria-label="Adjust photo"><span>No photo</span></button>
+                  <button type="button" class="photo-bin" id="photoRemove" aria-label="Remove photo" title="Remove photo" hidden></button>
+                </div>
+                <div class="photo-actions">
+                  <label class="btn btn-ghost btn-file"><span id="photoUploadLbl">Upload photo</span><input type="file" id="photoInput" accept="image/*"></label>
+                  <button class="btn btn-ghost" type="button" id="photoAdjust" hidden>Adjust photo</button>
+                  <button class="btn btn-ghost photo-bg-btn" type="button" id="photoBgBtn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6zM18.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg><span>Clean background</span></button>
+                </div>
+                <p class="hint photo-hint">Passport style. You can zoom and move it after choosing.</p>
+              </div>
+              <div class="photo-shape">
+                <span class="label" id="photoShapeLbl">Photo shape on the CV</span>
+                <div class="seg" id="photoShapeEdit" role="radiogroup" aria-labelledby="photoShapeLbl">
+                  <button type="button" data-eshape="square" aria-checked="false"><i class="ps-ic ps-square" aria-hidden="true"></i>Square</button><button type="button" data-eshape="rounded" aria-checked="true"><i class="ps-ic ps-rounded" aria-hidden="true"></i>Rounded</button><button type="button" data-eshape="circle" aria-checked="false"><i class="ps-ic ps-circle" aria-hidden="true"></i>Circle</button>
+                </div>
+                <p class="hint shape-note"></p>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="block" data-sec="education" data-page="2">
+          <legend><span class="num">2</span>Education</legend>
+          <div class="entries" id="list-education"></div>
+          <button class="btn btn-ghost btn-add" type="button" data-add="education">Add education</button>
+        </fieldset>
+
+        <div class="ad-slot" data-ad="editor_middle" data-size="banner" hidden></div>
+
+        <fieldset class="block" data-sec="experience" data-page="3">
+          <legend><span class="num">3</span>Work experience</legend>
+          <div class="entries" id="list-experience"></div>
+          <button class="btn btn-ghost btn-add" type="button" data-add="experience">Add job</button>
+        </fieldset>
+
+        <fieldset class="block" data-sec="skills" data-page="3">
+          <legend class="sub-legend">Skills <em class="opt">(optional)</em></legend>
+          <div class="chips" id="skillChips"></div>
+          <div class="skill-add">
+            <input id="skillInput" maxlength="40" placeholder="Type a skill and press Add" aria-label="New skill">
+            <button class="btn btn-ghost" type="button" id="skillAdd">Add</button>
+          </div>
+          <div class="writer-row">
+            <button class="btn btn-write" type="button" id="skillSuggest">Suggest skills</button>
+          </div>
+          <div class="chips suggest" id="skillSuggestions" aria-label="Suggested skills"></div>
+        </fieldset>
+
+        <fieldset class="block" data-sec="summary" data-page="3">
+          <legend class="sub-legend">Profile summary <em class="opt">(optional)</em></legend>
+          <div class="field">
+            <textarea id="summary" rows="5" placeholder="A short introduction: who you are, your experience and what you are looking for."></textarea>
+            <span class="counter" data-for="summary"></span>
+          </div>
+          <div class="writer-row">
+            <button class="btn btn-write" type="button" data-write="summary">Auto-write summary</button>
+            <button class="btn btn-ghost btn-small" type="button" data-write-again="summary">Write again</button>
+            <button class="btn btn-quiet btn-small" type="button" data-tidy="summary">Tidy text</button>
+          </div>
+          <p class="hint">Tip: fill in your work experience and skills above first. Auto-write uses them for the summary.</p>
+        </fieldset>
+
+        <fieldset class="block" data-sec="languages" data-page="4">
+          <legend><span class="num">4</span>Languages</legend>
+          <div class="entries compact" id="list-languages"></div>
+          <button class="btn btn-ghost btn-add" type="button" data-add="languages">Add language</button>
+        </fieldset>
+
+        <!-- (v4.30) page 5: a list of extra sections, each with its own Add button; plus the user's own sections -->
+        <fieldset class="block" data-sec="more" data-page="5">
+          <legend><span class="num">5</span>More sections</legend>
+          <p class="hint more-hint">Everything here is optional. Tap Add on a section to put it on your CV. Empty boxes are left out.</p>
+          <div class="more-list">
+            <div class="more-item" data-more="hobbies">
+              <div class="more-row"><span class="mr-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 3c0 5.4-7.5 10-7.5 10z"/></svg></span><span class="mr-text"><span class="mr-name">Hobbies</span><small class="mr-sub">What you enjoy in your free time</small></span><span class="mr-count" aria-hidden="true" hidden></span>
+                <button class="btn mr-add" type="button" data-add="hobbies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button></div>
+              <div class="entries compact" id="list-hobbies"></div>
+            </div>
+            <div class="more-item" data-more="certificates">
+              <div class="more-row"><span class="mr-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3h14v12H5zM8 7h8M8 10h5"/><path d="M9 15v6l3-2 3 2v-6"/></svg></span><span class="mr-text"><span class="mr-name">Certificates and training</span><small class="mr-sub">Courses, training and licences</small></span><span class="mr-count" aria-hidden="true" hidden></span>
+                <button class="btn mr-add" type="button" data-add="certificates"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button></div>
+              <div class="entries compact" id="list-certificates"></div>
+            </div>
+            <div class="more-item" data-more="achievements">
+              <div class="more-row"><span class="mr-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/></svg></span><span class="mr-text"><span class="mr-name">Achievements</span><small class="mr-sub">Results you are proud of at work</small></span><span class="mr-count" aria-hidden="true" hidden></span>
+                <button class="btn mr-add" type="button" data-add="achievements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button></div>
+              <div class="entries compact" id="list-achievements"></div>
+            </div>
+            <div class="more-item" data-more="awards">
+              <div class="more-row"><span class="mr-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5"/><path d="M8.5 13.5 7 21l5-2.6 5 2.6-1.5-7.5"/></svg></span><span class="mr-text"><span class="mr-name">Awards &amp; Honors</span><small class="mr-sub">Prizes and recognition you received</small></span><span class="mr-count" aria-hidden="true" hidden></span>
+                <button class="btn mr-add" type="button" data-add="awards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button></div>
+              <div class="entries compact" id="list-awards"></div>
+            </div>
+            <div class="more-item" data-more="projects">
+              <div class="more-row"><span class="mr-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/><path d="M3 7V5h6l2 2"/></svg></span><span class="mr-text"><span class="mr-name">Projects</span><small class="mr-sub">Work you planned or led</small></span><span class="mr-count" aria-hidden="true" hidden></span>
+                <button class="btn mr-add" type="button" data-add="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button></div>
+              <div class="entries compact" id="list-projects"></div>
+            </div>
+            <div class="more-item ref-item" data-more="references">
+              <div class="more-row"><span class="mr-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 7h5M16 11h5M17 15h4"/></svg></span><span class="mr-text"><span class="mr-name">References</span><small class="mr-sub">People who can recommend you</small></span><span class="mr-count" aria-hidden="true" hidden></span>
+                <button class="btn mr-add" type="button" data-ref-add><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button></div>
+              <div class="entries compact ref-body" hidden>
+                <div class="field">
+                  <label for="references">References <em class="opt">(optional)</em></label>
+                  <div class="ref-row"><textarea id="references" rows="3" placeholder="Available on request."></textarea><button type="button" class="box-clear ref-x" data-ref-remove aria-label="Remove references">×</button></div>
+                </div>
+              </div>
+            </div>
+            <div class="more-item" data-more="custom">
+              <div class="more-row"><span class="mr-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg></span><span class="mr-text"><span class="mr-name">Your own section</span><small class="mr-sub">Any other section, with your own heading</small></span><span class="mr-count" aria-hidden="true" hidden></span>
+                <button class="btn mr-add" type="button" data-add="custom"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button></div>
+              <div class="entries compact" id="list-custom"></div>
+            </div>
+          </div>
+        </fieldset>
+
+
+
+        <div class="actions" id="actions">
+          <button class="btn btn-primary btn-go-design" type="button" id="goDesign"><span>Go To Design Section</span><span class="nx-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span></button>
+          <!-- kept hidden: the Design section's Download PDF button uses it -->
+          <button class="btn btn-primary" type="button" id="btnDownload" hidden>Download PDF</button>
+          <button class="btn btn-ghost" type="submit" id="btnSave" hidden>Save CV</button>
+          <button class="btn btn-ghost" type="button" id="btnPrint" hidden>Print</button>
+          <button class="btn btn-ghost" type="button" id="btnShare" hidden>Share PDF</button>
+        </div>
+      </form>
+
+      <!-- (v4.95) the big ad in its own space under the form card (no border), on every Edit page -->
+      <div class="ad-zone ad-zone-edit"><div class="ad-slot" data-ad="editor_page" data-size="mrec" hidden></div></div>
+
+      <aside class="preview" id="preview" aria-label="Design and preview">
+        <div class="tools" id="tools" role="tablist" aria-label="Design tools">
+          <button type="button" class="tool is-on" data-tool="template" role="tab"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2.8" width="16" height="18.4" rx="3" fill="currentColor" fill-opacity=".18" stroke="none"/><rect x="4" y="2.8" width="16" height="18.4" rx="3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 8.6h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="11.2" width="4.2" height="6.6" rx="1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 12h3M14 15h3M14 18h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Template</button>
+          <button type="button" class="tool" data-tool="color" role="tab"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.3 0 1.9-.9 1.9-1.9 0-1.3-1.1-1.8-1.1-2.9 0-1 .8-1.8 1.8-1.8h2.1A4.3 4.3 0 0 0 21 10.2C21 6.1 17 3 12 3z" fill="currentColor" fill-opacity=".18" stroke="none"/><path d="M12 3a9 9 0 1 0 0 18c1.3 0 1.9-.9 1.9-1.9 0-1.3-1.1-1.8-1.1-2.9 0-1 .8-1.8 1.8-1.8h2.1A4.3 4.3 0 0 0 21 10.2C21 6.1 17 3 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.6" cy="11.4" r="1.3" fill="currentColor"/><circle cx="10.4" cy="7.4" r="1.3" fill="currentColor"/><circle cx="15.2" cy="7.6" r="1.3" fill="currentColor"/></svg>Colour</button>
+          <button type="button" class="tool" data-tool="size" role="tab"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.8" y="3.6" width="18.4" height="16.8" rx="3.4" fill="currentColor" fill-opacity=".18" stroke="none"/><path d="M6.2 16.6 9.6 7.4h.8l3.4 9.2M7.3 13.8h5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.8 11.2v5.4M17.8 12.6c-.4-.9-1.3-1.4-2.2-1.4-1.3 0-2.2 1.2-2.2 2.7s.9 2.7 2.2 2.7c.9 0 1.8-.5 2.2-1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Text &amp; font</button>
+          <button type="button" class="tool" data-tool="spacing" role="tab"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9.6" y="3.4" width="11.4" height="17.2" rx="2.6" fill="currentColor" fill-opacity=".18" stroke="none"/><path d="M12.6 7.6h5.4M12.6 12h5.4M12.6 16.4h5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 4.4v15.2M2.8 6.6 5 4.4l2.2 2.2M2.8 17.4 5 19.6l2.2-2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Spacing</button>
+          <button type="button" class="tool" data-tool="photo" role="tab"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.4" y="3.4" width="17.2" height="17.2" rx="4.4" fill="currentColor" fill-opacity=".18" stroke="none"/><rect x="3.4" y="3.4" width="17.2" height="17.2" rx="4.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="9.8" r="3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.8 19.6c.8-2.9 2.9-4.5 5.2-4.5s4.4 1.6 5.2 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Photo</button>
+          <button type="button" class="tool" data-tool="sections" role="tab"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.6" width="18" height="5.2" rx="1.8" fill="currentColor" fill-opacity=".18" stroke="none"/><rect x="3" y="3.6" width="18" height="5.2" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="11" width="18" height="4.2" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="17.4" width="18" height="3.4" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 6.2h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Sections</button>
+        </div>
+        <div class="preview-head">
+          <span class="ph-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><linearGradient id="phG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FB4FF"/><stop offset="1" stop-color="#1557E6"/></linearGradient><linearGradient id="phB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD25A"/><stop offset="1" stop-color="#F59F00"/></linearGradient></defs>
+            <path fill="url(#phG)" d="M31 5C16 5 5 16.2 5 29.8 5 43.2 15.8 56 29 56c3.4 0 5.2-2 5.2-4.6 0-3.2-2.8-4.2-2.8-7.2 0-2.6 2-4.6 4.8-4.6h6.4C52 39.6 58 34 58 26 58 14.8 46.8 5 31 5z"/>
+            <circle cx="18" cy="28" r="4.6" fill="#FFD43B"/><circle cx="25" cy="17" r="4.6" fill="#FF6B6B"/><circle cx="38" cy="16.6" r="4.6" fill="#51CF66"/><circle cx="47" cy="26" r="4.6" fill="#fff"/>
+            <path fill="url(#phB)" d="M60.5 33l3 3-19 19-5.4 2.4 2.4-5.4z"/></svg></span>
+          <div class="ph-text"><h2>Design</h2><span class="ph-sub">Template, colours and fonts</span></div>
+          <span class="preview-meta" id="previewMeta" hidden>A4</span>
+          
+        </div>
+        <div class="tool-panel" id="toolPanel" role="tabpanel"></div>
+        <div class="preview-bar">
+          <span class="design-note" id="designNote"></span>
+          <button type="button" class="btn btn-ghost btn-small" id="btnFull">Full screen</button>
+        </div>
+        <div class="cc-slot" id="ccSlot"></div>
+        <div class="pages-wrap"><button type="button" class="pv-full" id="pvFull" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button><div class="pages" id="pages"></div></div>
+        <div class="design-actions" id="designActions">
+          <button type="button" class="btn btn-primary btn-small" id="designDownload">Download PDF</button>
+          <button type="button" class="btn btn-ghost btn-small" id="designSave">Save CV</button>
+          <button type="button" class="btn btn-ghost btn-small" id="designShare" hidden>Share PDF</button>
+          <button type="button" class="btn btn-ghost btn-small" id="designPrint">Print</button>
+          <button type="button" class="ph-reset da-reset" id="headReset" title="Reset all design settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5"/></svg><span>Reset all design settings</span></button>
+          <button type="button" class="ph-reset da-reset da-undo" id="headUndo" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Undo</span></button>
+        </div>
+        <div class="ad-slot" data-ad="design_bottom" data-size="banner" hidden></div>
+        <!-- (v4.96) while the CV preview is off screen: a small bar to jump to it, or to download straight away -->
+        <div class="dz-float" id="dzFloat" hidden>
+          <button type="button" class="dz-prev" id="dzPreview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Preview</span></button>
+          <button type="button" class="dz-dl" id="dzDownload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Download PDF</span></button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ LIST ============ -->
+  <section class="view" id="view-list" hidden>
+    <div class="records-head">
+      <div class="rh-title">
+        <span class="rh-icon" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><linearGradient id="rhA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B9A2FF"/><stop offset="1" stop-color="#5B3BE0"/></linearGradient><linearGradient id="rhB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FB4FF"/><stop offset="1" stop-color="#1557E6"/></linearGradient></defs>
+          <g transform="rotate(-10 22 34)"><rect x="6" y="12" width="30" height="40" rx="5" fill="url(#rhA)"/></g>
+          <path fill="url(#rhB)" d="M22 7h22l11 11v35a5 5 0 0 1-5 5H22a5 5 0 0 1-5-5V12a5 5 0 0 1 5-5z"/><path fill="#9FD3FF" d="M44 7v8a4 4 0 0 0 4 4h7z"/>
+          <circle cx="30" cy="25" r="5" fill="#fff"/><path fill="#fff" d="M22 38c0-5 3.6-8 8-8s8 3 8 8z"/><path stroke="#fff" stroke-width="3" stroke-linecap="round" d="M41 24h7M41 31h6M24 45h24M24 51h17"/></svg></span>
+        <div class="rh-text"><h1>My CVs</h1><span class="rh-sub">Open, download or copy your saved CVs</span></div>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 3a7 7 0 0 1 5.6 11.2l5 5-1.4 1.4-5-5A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg>
+        <input type="search" id="search" placeholder="Search by name or job title" aria-label="Search CVs">
+      </div>
+      <button class="btn btn-primary" type="button" id="btnNew">New CV</button>
+    </div>
+    <p class="storage-note"><span class="sn-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 5h2v2h-2zm0 4h2v6h-2z"/></svg></span><span>CVs are saved only on this device. To move them to another phone, save a backup file.</span> <button class="link" type="button" id="openSettings2">Backup CVs</button></p>
+    <div id="cvList" class="record-list"></div>
+    <div class="ad-slot" data-ad="list_bottom" data-size="banner" hidden></div>
+  </section>
+</main>
+
+<!-- Settings -->
+<div class="settings-page" id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+  <header class="sp-bar">
+    <button class="back-btn sp-back" id="closeSettings" type="button" aria-label="Back" title="Back">
+      <span class="back-ring" aria-hidden="true"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="back-shaft" d="M20 12H5"/><path class="back-head" d="M11 5l-7 7 7 7"/></svg>
+    </button>
+    <h2 id="settingsTitle">Settings</h2>
+  </header>
+  <div class="sp-body">
+    <section class="sp-card" id="accountCard" hidden>
+      <h3 class="sp-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg>Account</h3>
+      <div id="accountBody"></div>
+    </section>
+    <section class="sp-card" id="appearanceCard">
+      <h3 class="sp-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0 0 18c.8 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>Appearance</h3>
+      <div class="setting">
+        <label for="appLang">App language</label>
+        <select id="appLang">
+          <option value="en">English</option>
+          <option value="hi">हिन्दी (Hindi)</option>
+          <option value="ur">اردو (Urdu)</option>
+          <option value="fa">فارسی (Farsi)</option>
+          <option value="ru">Русский (Russian)</option>
+          <option value="de">Deutsch (German)</option>
+          <option value="fr">Français (French)</option>
+          <option value="ar">العربية (Arabic)</option>
+        </select>
+        <p class="sp-note sp-note-after">Your CV and its PDF stay in English letters. The PDF can print only Latin letters.</p>
+      </div>
+      <div class="setting">
+        <label for="appTheme">App theme</label>
+        <select id="appTheme">
+          <option value="light">Google Blue</option>
+          <option value="ocean">Teal</option>
+          <option value="emerald">Green</option>
+          <option value="purple">Purple</option>
+          <option value="sunset">Orange</option>
+          <option value="neon">Dark</option>
+        </select>
+      </div>
+      <div class="setting">
+        <span class="label">Display size</span>
+        <div class="seg" id="uiScale" role="radiogroup" aria-label="Display size">
+          <button type="button" data-ui="0.75">Small</button><button type="button" data-ui="0.85">Large</button>
+        </div>
+        <p class="sp-note sp-note-after">Smaller shows more on each screen. Everything shrinks evenly: text, buttons and spacing.</p>
+      </div>
+    </section>
+    <section class="sp-card" id="backupCard">
+      <h3 class="sp-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 10A7.5 7.5 0 0 0 5.4 8 6 6 0 0 0 6 20h13a5 5 0 0 0 .4-10zM14 13v4h-4v-4H7l5-5 5 5z"/></svg>Backup CVs</h3>
+      <p class="sp-note">Your CVs are saved only on this device. Save a backup file to keep them safe or move them to another phone.</p>
+      <div class="setting">
+        <div class="row">
+          <button class="btn btn-tonal" type="button" id="exportData">Save backup</button>
+          <label class="btn btn-ghost btn-file">Load backup<input type="file" id="importData" accept="application/json,.json"></label>
+        </div>
+      </div>
+    </section>
+    <section class="sp-card" id="autosaveCard">
+      <h3 class="sp-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l4 4v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2 2v4h8V5zm5 7.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/></svg>Auto-save</h3>
+      <p class="sp-note">While you edit, your CV saves itself on this device, so your work is never lost.</p>
+      <div class="setting">
+        <span class="label">Auto-save</span>
+        <div class="seg" id="autoSaveOn" role="radiogroup" aria-label="Auto-save">
+          <button type="button" data-as="1">On</button><button type="button" data-as="0">Off</button>
+        </div>
+      </div>
+      <div class="setting" id="autoSaveEveryRow">
+        <label for="autoSaveEvery">Save every</label>
+        <select id="autoSaveEvery">
+          <option value="10">10 seconds</option>
+          <option value="15">15 seconds</option>
+          <option value="30">30 seconds</option>
+          <option value="45">45 seconds</option>
+          <option value="60">1 minute</option>
+          <option value="120">2 minutes</option>
+          <option value="300">5 minutes</option>
+        </select>
+      </div>
+    </section>
+    <section class="sp-card" id="cloudCard" hidden>
+      <h3 class="sp-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 10A7.5 7.5 0 0 0 5.4 8 6 6 0 0 0 6 20h13a5 5 0 0 0 .4-10zM10.6 16.4l-3.3-3.3 1.4-1.4 1.9 1.9 4.6-4.6 1.4 1.4z"/></svg>Google Drive backup</h3>
+      <div id="cloudBody"></div>
+    </section>
+    <section class="sp-card" id="premiumCard" hidden>
+      <h3 class="sp-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5zm2 13h14v2H5z"/></svg>Premium</h3>
+      <div id="premiumBody"></div>
+    </section>
+    <section class="sp-card" id="privacyCard">
+      <h3 class="sp-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4z"/></svg>Privacy policy</h3>
+      <div class="pp-text" lang="en" dir="ltr">
+        <p class="pp-date">Last updated: 19 November 2026</p>
+        <p>Rich CV Maker : Resume Builder is made by Rich Solutions. This policy explains what information the app uses and why.</p>
+        <h4>Your CVs and photos stay on your phone</h4>
+        <p>The CVs you write, your photo and the PDFs you make are saved only on your device. We do not receive, see or store them. The "Clean background" photo tool works on your phone, without the internet.</p>
+        <h4>Optional account</h4>
+        <p>If you choose to log in, Google Firebase Authentication keeps your email address and name so you can sign in. You can delete your account at any time in Settings &gt; Account &gt; Manage &gt; Delete my account.</p>
+        <h4>Optional Google Drive backup (Pro)</h4>
+        <p>If you turn on Drive backup, a backup file of your CVs is saved in a private app folder of your own Google Drive. Only this app can read that folder. We do not have access to it.</p>
+        <h4>Ads</h4>
+        <p>The free version shows ads from Google AdMob. Google may collect your device's advertising ID, IP address and basic device information to show and measure ads. In the European Economic Area, the UK and Switzerland the app asks for your consent first, and you can change it at any time in Settings &gt; Privacy choices. You can also reset or delete your advertising ID in your phone's settings. See how Google uses data: policies.google.com/technologies/partner-sites</p>
+        <h4>Purchases</h4>
+        <p>Pro is bought through Google Play. Google handles the payment. We never see your card or payment details.</p>
+        <h4>Children</h4>
+        <p>The app is meant for adults and job seekers aged 18 and over. It is not directed at children.</p>
+        <h4>Changes and contact</h4>
+        <p>If this policy changes, the new version will be shown here. Questions: iambutt777@gmail.com</p>
+      </div>
+    </section>
+    <section class="sp-card" id="adsCard" hidden>
+      <h3 class="sp-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2.4 11h1.7l.5-1.4h2.5l.5 1.4h1.7L10.6 8H9.1zm2.7-2.8L9.9 10l.8 2.2zM14 8v7h2.2a3.5 3.5 0 0 0 0-7zm1.6 1.5h.6a2 2 0 0 1 0 4h-.6z"/></svg>Ads check</h3>
+      <p class="sp-note">What Google AdMob answered for each ad on this phone. New apps get few or no ads until they are on Google Play and AdMob has approved them.</p>
+      <div class="ads-status" id="adsStatus"></div>
+      <label class="check ads-test"><input type="checkbox" id="adsTest"> Show Google test ads (only to check that ads work; earns nothing)</label>
+      <div class="row"><button class="btn btn-ghost" type="button" id="adsRefresh">Refresh</button></div>
+    </section>
+  </div>
+</div>
+
+<!-- Job title list -->
+<div class="overlay sheet-overlay" id="jobSheet" hidden>
+  <div class="job-sheet" role="dialog" aria-modal="true" aria-labelledby="jobSheetTitle">
+    <div class="job-sheet-head"><h2 id="jobSheetTitle">Choose a job title</h2><button type="button" class="btn btn-ghost btn-small" id="jobSheetClose">Close</button></div>
+    <div class="job-sheet-list" id="jobSheetList"></div>
+  </div>
+</div>
+
+<!-- Full screen preview -->
+<div class="fullview" id="fullview" hidden role="dialog" aria-modal="true" aria-label="Full screen preview">
+  <div class="fullbar">
+    <button class="btn btn-ghost btn-small" type="button" id="fullClose">Close</button>
+    <div class="fullzoom">
+      <button class="btn btn-ghost btn-small" type="button" id="fullMinus" aria-label="Zoom out">−</button>
+      <span id="fullZoomLabel">100%</span>
+      <button class="btn btn-ghost btn-small" type="button" id="fullPlus" aria-label="Zoom in">+</button>
+    </div>
+    <button class="btn btn-primary btn-small" type="button" id="fullDownload">Download PDF</button>
+  </div>
+  <div class="fullpages" id="fullPages"></div>
+</div>
+
+<!-- Photo editor -->
+<div class="overlay" id="cropper" hidden>
+  <div class="dialog crop-dialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+    <h2 id="cropTitle">Adjust photo</h2>
+    <p class="hint">Drag to move. Pinch or use the slider to zoom in or out. Fit the face inside the oval.</p>
+    <div class="crop-frame" id="cropFrame">
+      <canvas id="cropCanvas" aria-label="Photo crop area"></canvas>
+      <div class="crop-guide" aria-hidden="true"></div>
+    </div>
+    <div class="crop-zoom">
+      <button class="btn btn-ghost btn-small" type="button" id="cropMinus" aria-label="Zoom out">−</button>
+      <input type="range" id="cropZoom" min="0.5" max="8" step="0.01" value="1" aria-label="Zoom">
+      <button class="btn btn-ghost btn-small" type="button" id="cropPlus" aria-label="Zoom in">+</button>
+      <span class="crop-zoom-label" id="cropZoomLabel">100%</span>
+    </div>
+    <div class="crop-tools">
+      <button class="btn btn-ghost btn-small" type="button" id="cropRotate">Rotate</button>
+      <button class="btn btn-quiet btn-small" type="button" id="cropReset">Reset</button>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn btn-quiet" type="button" id="cropCancel">Cancel</button>
+      <button class="btn btn-primary" type="button" id="cropUse">Use photo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm -->
+<div class="overlay" id="confirm" hidden>
+  <div class="dialog dialog-small" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="cf-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></div>
+    <h2 id="confirmTitle">Are you sure?</h2>
+    <div class="cf-item" id="confirmItem" hidden><span class="cf-item-ic" id="confirmItemIc">PDF</span><b id="confirmItemName" data-no-i18n></b></div>
+    <p id="confirmText"></p>
+    <div class="dialog-foot">
+      <button class="btn btn-danger" type="button" id="confirmYes">Delete</button>
+      <button class="btn btn-quiet" type="button" id="confirmNo">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ad banner fixed at the bottom of the screen (see js/ads.js) -->
+<div class="ad-bar" id="adBar" hidden><div class="ad-slot" data-ad="bottom_banner" data-size="banner"></div></div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="auto-toast" id="autoToast" role="status" aria-live="polite"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L21 7.5l-1.4-1.4z"/></svg><span>CV saved automatically</span></div>
+<div id="printArea" aria-hidden="true"></div>
+
+<script src="js/pdf-lib.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/anim.js"></script>
+<script src="js/i18n-data.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/ads.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/logo.js"></script>
+<script>document.getElementById('splashLogo').src = window.RICH_LOGO_HEADER || window.RICH_LOGO;</script>
+<script src="js/storage.js"></script>
+<script src="js/pdf.js"></script>
+<script src="js/cv-designs.js"></script>
+<script src="js/writer.js"></script>
+<script src="js/dragsort.js"></script>
+<script src="js/docx.js"></script>
+<script src="js/app.js"></script>
+<script src="js/form-ui.js"></script>
+<script src="js/wizard.js"></script>
+<script src="js/cloud.js"></script>
+<script src="js/premium.js"></script>
+<script src="js/tplpick.js"></script>
+<script src="js/photobg.js"></script>
+<script src="js/ic-seg.js"></script>
+<script src="js/account.js"></script>
+<script src="js/settings-menu.js"></script>
+<script src="js/date-picker.js"></script>
+<script src="js/keyboard.js"></script>
+<script src="js/stretch.js"></script>
+<script src="js/intro-images.js"></script>
+<script src="js/intro.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rich CV Maker : Resume Builder</string>
+    <!-- shorter name under the icon on the home screen -->
+    <string name="launcher_name">Rich CV Maker</string>
+</resources>
