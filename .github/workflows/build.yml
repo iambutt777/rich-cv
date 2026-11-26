@@ -1,28 +1,42 @@
-name: Build APK
+name: Build TEST APK only
+
 on:
   push:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - name: Find the test project
+        run: |
+          for z in *.zip; do [ -f "$z" ] && unzip -oq "$z"; done
+          TEST=$(find . -path '*/test-build/android-app/settings.gradle' -not -path './.git/*' | head -n 1)
+          if [ -z "$TEST" ]; then echo "test-build/android-app folder not found"; exit 1; fi
+          echo "TESTDIR=$(dirname "$TEST")" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
 
-      # your project has no gradlew, so install the Gradle version it asks for
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 8.11.1
+          gradle-version: '8.11.1'
 
-      - name: Build release APK
-        run: gradle assembleRelease --no-daemon
+      - name: Build the TEST app (APK only)
+        run: |
+          cd "$TESTDIR"
+          gradle assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Rich-CV-Maker-TEST.apk"
 
-      - uses: actions/upload-artifact@v4
+      - uses: softprops/action-gh-release@v2
         with:
-          name: RichCVMaker-apk
-          path: app/build/outputs/apk/release/*.apk
+          tag_name: test-${{ github.run_number }}
+          name: Rich CV Maker TEST ${{ github.run_number }}
+          files: Rich-CV-Maker-TEST.apk
