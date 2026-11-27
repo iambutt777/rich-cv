@@ -1,3 +1,4 @@
+# Builds only the TEST APK ("qwerty" Pro password, test ads) - never upload it to Play.
 name: Build TEST APK only
 
 on:
